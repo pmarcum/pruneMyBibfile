@@ -1,0 +1,108 @@
+name: Prune-out unused .bib entries
+# Automatically runs when .bib file or .tex file is changed in repo.
+# Will prune the .bib file and produce a "ref.bib" file that can be 
+# used for submission rather than the huge BibMan bibfile. 
+#
+# ###################
+#  Pamela M. Marcum #
+#     06/06/2024    #
+# ###################
+
+on:
+  push:
+    paths:
+    - '**.tex'
+    - '**.bib'
+    - 'do_NOT_manually_edit/**.bib'
+#on:
+#  workflow_dispatch:
+jobs:
+  prune_bibfile:
+    runs-on: ubuntu-latest
+    permissions:
+       contents: write
+    steps:
+       - name: Clone repo and install python
+         uses: actions/checkout@v4  # checkout the repository content to github runner.
+
+       - name: setup python
+         uses: actions/setup-python@v5
+         with:
+            python-version: '3.9' #install the python needed
+            
+       - name: Get list of all .tex files in repo
+         id: texlist
+         uses: Rishabh510/Path-lister-action@master
+         with:
+            path: "./"
+            type: ".tex"
+
+       - name: Get list of all .bib files
+         id: biblist
+         uses: Rishabh510/Path-lister-action@master
+         with:
+            path: "./"
+            type: ".bib"
+         
+       - name: Process the bib and tex files and perform pruning
+         run: |
+            echo ===> combining all .tex files in repo in into a single temporary file
+            touch texfile.tmp
+            texfileExists=0
+            for path in ${{ steps.texlist.outputs.paths }}
+            do
+                cat $path >> texfile.tmp; texfileExists=1
+            done
+
+            echo ===> combining all .bib files in repo into a single temporary file
+            touch bibfile.tmp
+            bibfileExists=0
+            for path in ${{ steps.biblist.outputs.paths }}
+            do
+                if [[ ! $path =~ "pruned" ]]; then cat $path >> bibfile.tmp; bibfileExists=1; fi
+            done
+            
+            # change all natbib cite commands to plain cite command
+            if [[ "$texfileExists" == 1 ]]
+            then
+                echo ===> converting all natbib commands into simple cite commands in the .tex temporary file
+                sed -E -i 's/\\cite([^{]*)\{/\\cite\{/ig' texfile.tmp
+                echo ===> converting all plus signs into _plus_
+                sed -E -i 's/\+/_plus_/ig' texfile.tmp
+            else
+                echo "!!!!!!!!!!!!!!!! No tex files in repo !!"
+            fi
+
+            if [[ "$bibfileExists" == 1 ]]
+            then
+                echo ===> converting all plus signs into _plus_
+                sed -E -i 's/\+/_plus_/ig' bibfile.tmp
+            else
+                echo "! ! ! ! ! ! ! No bib files in repo !!"
+            fi
+
+            if ([ "$bibfileExists" == 1 ] && [ "$texfileExists" == 1 ])
+            then
+                echo ===> installing bib_cleaner
+                pip install bib_cleaner
+                echo ===> now starting the bib_cleaner command
+                bib_cleaner bibfile.tmp --texfiles texfile.tmp --outputbib pruned.bib 
+                echo ===> now replacing _plus_ with plus signs
+                sed -E -i 's/_plus_/\+/ig' pruned.bib
+            else
+                echo "No .tex file and/or .bib file in repository!"
+                touch pruned.bib
+            fi
+            
+       - name: Upload bib file
+         uses: actions/upload-artifact@v4
+         with: 
+            name: Setting path of pruned bib file
+            path: pruned.bib
+            
+       - name: Publish pruned bib file to repo
+         id: create_release
+         uses: stefanzweifel/git-auto-commit-action@v5.0.0
+         with:
+            file_pattern:  pruned.bib
+            commit_message: 'Pruned bib file'
