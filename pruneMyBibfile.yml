@@ -1,12 +1,14 @@
 name: Prune-out unused .bib entries
-# Automatically runs when .bib file or .tex file is changed in repo.
-# Will prune the .bib file and produce a "ref.bib" file that can be 
-# used for submission rather than the huge BibMan bibfile. 
-#
-# ###################
-#  Pamela M. Marcum #
-#     06/06/2024    #
-# ###################
+# Automatically runs when .bib file or .tex file is changed in repo. Will prune the .bib file and 
+# produce a 'ref.bib' file that can be used for submission rather than the huge BibMan bibfile. 
+# NOTE: As of 06/10/2024, if you use BibMan to manage your bibliography library, when you execute 
+# BibMan, a copy of pruneMyBibfile will automatically be installed in the github repository of your
+# paper/proposal/document so that the pruned.bib file will be automatically generated whenever a 
+# .tex or .bib file is changed in that repo. 
+# ############################
+#      Pamela M. Marcum      #
+#  first created: 06/06/2024 #
+# ############################
 
 on:
   push:
@@ -75,6 +77,10 @@ jobs:
 
             if [[ "$bibfileExists" == 1 ]]
             then
+                echo ===> sorting the entries and removing redundancies in the .bib temporary file
+                sed ':a;N;$!ba;s/\n/\x0/g' bibfile.tmp | sed -r 's/(@[a-zA-Z]+)/\1## /g' | sed 's/\} *\x0\@/\}\n\n\@/g' | sort -k2 | uniq -i | sed 's/\x0/\n/g' | sed 's/\## //g' > tmp.tmp
+                mv -f tmp.tmp bibfile.tmp
+                rm -f tmp.tmp
                 echo ===> converting all plus signs into _plus_
                 sed -E -i 's/\+/_plus_/ig' bibfile.tmp
             else
