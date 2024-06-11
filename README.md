@@ -9,5 +9,7 @@ To install pruneMyBibfile in your repository, go to your github repository, clic
 
 UPDATES
 
-* v1.0.1  6/10/2024 - Added a couple of lines to insure that the resulting pruned.bib file was sorted on the bibcode and duplicative entries removed. 
+* v1.0.1  6/10/2024
+  - Added a couple of lines to insure that the resulting pruned.bib file was sorted on the bibcode and duplicative entries removed.
+  - BibMan will now install pruneMyBibfile into the github repository associated with a paper, proposal, document 
 * v1.0.0  first commit
