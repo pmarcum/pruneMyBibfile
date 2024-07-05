@@ -1,5 +1,5 @@
 name: Prune-out unused .bib entries
-# Version: 07042024
+# Version: 07052024
 #
 # Automatically runs when .bib file or .tex file is changed in repo. Will prune the .bib file and 
 # produce a 'ref.bib' file that can be used for submission rather than the huge BibMan bibfile. 
@@ -69,6 +69,8 @@ jobs:
             if [[ "$texfileExists" == 1 ]]
             then
                 echo ===> converting all natbib commands into simple cite commands in the .tex temporary file
+                # remove all the square bracket stuff between the \cite and the {references}
+                sed -E -i 's/\[[^]]*\]//g' texfile.tmp
                 sed -E -i 's/\\cite([^{]*)\{/\\cite\{/ig' texfile.tmp
                 echo ===> converting all plus signs into _plus_
                 sed -E -i 's/\+/_plus_/ig' texfile.tmp
