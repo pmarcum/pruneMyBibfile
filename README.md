@@ -9,6 +9,9 @@ If you use BibMan as your reference manager, then BibMan will install pruneMyBib
 
 UPDATES
 
+* v07042024 07/04/2024
+  - Added the capability of the script to handle having "." characters in bib labels.
+  - Eliminated the uncertainty of whether or not the package that pruneMyBibfile calls, bib_cleaner, does not recognize @MISC and other non-@ARTICLE entries by temporarily changing all entries to @ARTICLE. 
 * v1.0.1  6/10/2024
   - Added a couple of lines to insure that the resulting pruned.bib file was sorted on the bibcode and duplicative entries removed.
   - BibMan will now install pruneMyBibfile into the github repository associated with a paper, proposal, document 
