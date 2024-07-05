@@ -1,4 +1,6 @@
 name: Prune-out unused .bib entries
+# Version: 07042024
+#
 # Automatically runs when .bib file or .tex file is changed in repo. Will prune the .bib file and 
 # produce a 'ref.bib' file that can be used for submission rather than the huge BibMan bibfile. 
 # NOTE: As of 06/10/2024, if you use BibMan to manage your bibliography library, when you execute 
