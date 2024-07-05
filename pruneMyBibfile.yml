@@ -16,8 +16,7 @@ on:
     - '**.tex'
     - '**.bib'
     - 'do_NOT_manually_edit/**.bib'
-#on:
-#  workflow_dispatch:
+  workflow_dispatch:
 jobs:
   prune_bibfile:
     runs-on: ubuntu-latest
@@ -71,6 +70,8 @@ jobs:
                 sed -E -i 's/\\cite([^{]*)\{/\\cite\{/ig' texfile.tmp
                 echo ===> converting all plus signs into _plus_
                 sed -E -i 's/\+/_plus_/ig' texfile.tmp
+                echo ===> converting all periods into _period_
+                sed -E -i 's/\./_period_/ig' texfile.tmp
             else
                 echo "!!!!!!!!!!!!!!!! No tex files in repo !!"
             fi
@@ -78,11 +79,27 @@ jobs:
             if [[ "$bibfileExists" == 1 ]]
             then
                 echo ===> sorting the entries and removing redundancies in the .bib temporary file
-                sed ':a;N;$!ba;s/\n/\x0/g' bibfile.tmp | sed -r 's/(@[a-zA-Z]+)/\1## /g' | sed 's/\} *\x0\@/\}\n\n\@/g' | sort -k2 | uniq -i | sed 's/\x0/\n/g' | sed 's/\## //g' > tmp.tmp
+                # explanation of below sed command: 
+                #   :a;N;$!ba; is a loop which joins lines (using N) until it gets to last line
+                #   s/(@[a-zA-Z]+)/\1## /g substitutes '@ARTICLE', '@MISC', '@INBOOK', etc with '@ARTICLE## ', '@MISC## ', '@INBOOK## '
+                #   s/\} *\x0\@/\}\n\n\@/g breaks out each entry into its own separate line, separated from the other entry by a white space. 
+                #   sort -k2 sorts the list on the bib label (e.g., 'abadi+2003apk591_699'), and uniq -i removes duplicates
+                #   s/\x0/\n/g splits out each field within an entry into its own line
+                #   s/\## //g removes the placeholder ## following the @ARTICLE, etc to restore to original format
+                sed ':a;N;$!ba;s/\n/\x0/g' bibfile.tmp | \
+                   sed -r 's/(@[a-zA-Z]+\{) *\x0+ */\1/g' | \
+                   sed -r 's/@([a-zA-Z]+)\{([^\,]+)\,\x0/@\1\{\2\,\x0 orig = {\1}\,\x0/g' | \
+                   sed -r 's/@[a-zA-Z]+/@ARTICLE## /g' | \
+                   sed -r 's/\} *\x0\@/\}\n\n\@/g' | \
+                   sort -k2 | \
+                   uniq -i | \
+                   sed 's/\x0/\n/g' | \
+                   sed 's/\## //g' > tmp.tmp
                 mv -f tmp.tmp bibfile.tmp
-                rm -f tmp.tmp
                 echo ===> converting all plus signs into _plus_
                 sed -E -i 's/\+/_plus_/ig' bibfile.tmp
+                echo ===> converting all periods into _period_
+                sed -E -i 's/\./_period_/ig' bibfile.tmp
             else
                 echo "! ! ! ! ! ! ! No bib files in repo !!"
             fi
@@ -92,9 +109,16 @@ jobs:
                 echo ===> installing bib_cleaner
                 pip install bib_cleaner
                 echo ===> now starting the bib_cleaner command
-                bib_cleaner bibfile.tmp --texfiles texfile.tmp --outputbib pruned.bib 
+                bib_cleaner bibfile.tmp --texfiles texfile.tmp --outputbib pruned.tmp 
                 echo ===> now replacing _plus_ with plus signs
-                sed -E -i 's/_plus_/\+/ig' pruned.bib
+                sed -E -i 's/_plus_/\+/ig' pruned.tmp
+                echo ===> now replacing _period_ with periods
+                sed -E -i 's/_period_/\./ig' pruned.tmp
+                echo ===> now replacing @ARTICLE with original category and removing temporary orig field
+                sed ':a;N;$!ba;s/\n/\x0/g' pruned.tmp | \
+                   sed -r 's/@(ARTICLE)\{([^\,]+)\,\x0 orig = \{([a-zA-Z]+)\}\,\x0/@\3\{\2\,\x0/g' | \
+                   sed 's/\} *\x0\@/\}\n\n\@/g' | \
+                   sed 's/\x0/\n/g' > pruned.bib
             else
                 echo "No .tex file and/or .bib file in repository!"
                 touch pruned.bib
